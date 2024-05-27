@@ -8,7 +8,8 @@ import { response } from "express";
 
 
 
-const registerUser = asyncHandler( async (req,rest) => {
+const registerUser = asyncHandler( async (req, res) => {
+
     // get user details from frontend/postman
     // validation - not empty
     // check if user already exist: username , email
@@ -21,7 +22,7 @@ const registerUser = asyncHandler( async (req,rest) => {
 
 // get user details from frontend/postman
     const {fullName, email, userName, password} = req.body
-    console.log("email: ", email);
+    // console.log("email: ", email);
 
 // You can do 1 by 1 also
     // if(fullName === ""){
@@ -29,16 +30,15 @@ const registerUser = asyncHandler( async (req,rest) => {
     // }
 
 // validation - not empty
-    if([fullName, email, userName, password].some((field) => 
-        field?.trim() === "")  
+    if([fullName, email, userName, password].some( (field) => field?.trim() === "")  
     ){
-        throw new Apierror(400, "fullName is required")
+        throw new Apierror(400, "all fields is required")
     }
 
 
  // check if user already exist: username , email
-    const existedUser = User.findOne({
-        $or: [{ email }, { userName }]                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     
+    const existedUser = await User.findOne({
+        $or: [{ userName }, { email }]                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     
     })
 
     if(existedUser){
@@ -46,11 +46,18 @@ const registerUser = asyncHandler( async (req,rest) => {
     }
 
 // check for images, check for avatar
+    //console.log(req.files);
 
     const avatarLocalPath = req.files?.avatar[0]?.path ;
-    const coverImageLocalPath = req.files?.coverImage[0]?.path;
+    //const coverImageLocalPath = req.files?.coverImage[0]?.path;
 
-    if(!coverImageLocalPath){
+    let coverImageLocalPath;
+
+    if (req.files && Array.isArray(req.files.coverImage) && req.files.coverImage.length > 0) {
+        coverImageLocalPath = req.files.coverImage[0].path ;
+    }
+
+    if(!avatarLocalPath){
         throw new Apierror(400, "avatar file is requried")
     }
 // upload them to cloudinary, avatar
@@ -70,7 +77,7 @@ const registerUser = asyncHandler( async (req,rest) => {
         coverImage: coverImage?.url || "",
         email,
         password,
-        userName: userName.toLowerCase(),
+        userName: userName.toLowerCase()
     })
 
 // remove password and refresh token field from response
@@ -82,13 +89,13 @@ const registerUser = asyncHandler( async (req,rest) => {
 // check for user creation
 
     if(!createdUser){
-        throw new Apierror(500, "Something wen wrong while registering the user.")
+        throw new Apierror(500, "Something went wrong while registering the user.")
     }
 
 // return res.
 
-    return response.status(201).json(
-        new ApiResponse(200, 200 , createdUser, "User Registered Successfully.")
+    return res.status(201).json(
+        new ApiResponse(200, createdUser, "User Registered Successfully.")
     )
 
 })
