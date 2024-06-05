@@ -4,8 +4,9 @@ import { User } from "../models/user.model.js";
 import { uploadOnCloudinary } from "../utils/cloudinary.js";
 import { ApiResponse } from "../utils/apiResponse.js";
 import jwt from "jsonwebtoken"
+import { deleteOldFiles } from "../utils/deleteOldFiles.js";
 
-const generateAccessAndRefreshTokens = async(userId) => {
+const generateAccessAndRefreshTokens = async (userId) => {
     try {
         const user = await User.findById(userId);
         const accessToken = user.generateAccessToken();
@@ -324,6 +325,8 @@ const updateUserAvatar = asyncHandler( async (req, res) => {
 
     const avatar = await uploadOnCloudinary(avatarLocalPath)
 
+    const avatarOldUrl = avatar.url ;
+
     if(!avatar.url){
         throw new ApiError(400, "Error while uploading on avatar")
     }
@@ -339,6 +342,11 @@ const updateUserAvatar = asyncHandler( async (req, res) => {
         {new: true}
     ).select("-password")
 
+    const isFileDelete = deleteOldFiles(avatarOldUrl);
+    
+    if(isFileDelete)
+        throw new ApiResponse(200,{},"Old file is delete successfully")
+    
     return res
     .status(200)
     .json(200, user, "Avatar Update Successfully")
@@ -355,6 +363,8 @@ const updateUserCoverImage = asyncHandler( async (req, res) => {
 
     const coverImage = await uploadOnCloudinary(coverImageLocalPath)
 
+    const coverImageOldUrl = coverImage.url
+
     if(!coverImage.url){
         throw new ApiError(400, "Error while uploading on cover image")
     }
@@ -369,6 +379,8 @@ const updateUserCoverImage = asyncHandler( async (req, res) => {
         },
         {new: true}
     ).select("-password")
+
+    deleteOldFiles(coverImageOldUrl)
 
     return res
     .status(200)
